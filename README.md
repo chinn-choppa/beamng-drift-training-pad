@@ -2,8 +2,6 @@
 
 A compact, structured drift-training map for **BeamNG.drive** focused on learning vehicle control rather than driving a full drift circuit.
 
-![Training pad layout](levels/drift_training_pad/preview.png)
-
 ## Why this map exists
 
 Most drift maps assume that the driver can already link corners. Drift Training Pad starts earlier and provides repeatable reference geometry for fundamental exercises:
@@ -22,7 +20,7 @@ Each exercise has its own BeamNG spawn point so practice can stay focused and re
 
 **v0.1 MVP is under development for BeamNG.drive 0.39.4.**
 
-The repository already generates the complete level structure, validates it statically, and builds a deterministic BeamNG mod ZIP in CI. The next release gate is an in-game smoke test of the packaged ZIP.
+The repository generates the complete level structure and schematic preview from source, validates them statically, and builds a deterministic BeamNG mod ZIP in CI. The next release gate is an in-game smoke test of the packaged ZIP.
 
 See [the roadmap](docs/roadmap.md) and [issue #1](https://github.com/chinn-choppa/beamng-drift-training-pad/issues/1).
 
@@ -47,7 +45,7 @@ No physics mods are required.
 
 ## Development
 
-The map uses the modern BeamNG level structure:
+CI generates the distributable map using the modern BeamNG level structure:
 
 ```text
 levels/
@@ -63,17 +61,19 @@ levels/
 
 `items.level.json` files are newline-delimited JSON (NDJSON), matching current BeamNG level serialization.
 
-Generated level data comes from `scripts/generate_level.py`:
+Generated level data comes from the scripts in `scripts/`:
 
 ```bash
 python scripts/generate_level.py
+python scripts/generate_preview.py
 python scripts/generate_level.py --check
+python scripts/generate_preview.py --check
 python scripts/validate_level.py
 python -m unittest discover -s tests -v
 python scripts/package_mod.py --output dist/drift_training_pad.zip
 ```
 
-The project intentionally uses only Python's standard library for generation, validation, tests, and packaging.
+The project intentionally uses only Python's standard library for generation, validation, tests, preview rendering, and packaging.
 
 ## Runtime testing
 
