@@ -1,0 +1,52 @@
+{
+  "driftpad_asphalt": {
+    "name": "driftpad_asphalt",
+    "mapTo": "driftpad_asphalt",
+    "class": "Material",
+    "Stages": [
+      {
+        "baseColorFactor": [
+          0.115,
+          0.12,
+          0.125,
+          1
+        ],
+        "roughnessFactor": 0.94,
+        "metallicFactor": 0
+      },
+      {},
+      {},
+      {}
+    ],
+    "groundType": "ASPHALT",
+    "annotation": "ASPHALT",
+    "materialTag0": "beamng",
+    "materialTag1": "road",
+    "version": 1.5
+  },
+  "driftpad_marking_white": {
+    "name": "driftpad_marking_white",
+    "mapTo": "driftpad_marking_white",
+    "class": "Material",
+    "Stages": [
+      {
+        "baseColorFactor": [
+          0.92,
+          0.92,
+          0.88,
+          1
+        ],
+        "roughnessFactor": 0.78,
+        "metallicFactor": 0
+      },
+      {},
+      {},
+      {}
+    ],
+    "groundType": "ASPHALT",
+    "annotation": "ROAD",
+    "materialTag0": "beamng",
+    "materialTag1": "road",
+    "version": 1.5
+  }
+}
