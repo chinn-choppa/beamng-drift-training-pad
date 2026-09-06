@@ -1,0 +1,19 @@
+# BeamNG / authoring outputs
+*.zip
+/dist/
+/build/
+/source/
+*.autosave
+*.bak
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
