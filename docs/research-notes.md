@@ -1,24 +1,41 @@
 # Research notes
 
-Initial implementation choices were checked against current BeamNG.drive level documentation and existing open-source tooling before development began.
+## BeamNG level structure
 
-## Current BeamNG guidance used
+The initial implementation follows current BeamNG level serialization conventions:
 
-- Modern levels should use `levels/<level_name>/main/` as their scene-tree entry point.
-- `items.level.json` is newline-delimited JSON: one complete object per line.
-- `SpawnSphere` objects are referenced from `info.json` through `defaultSpawnPointName` / `spawnPoints[].objectname`.
-- A minimal outdoor environment can use `TimeOfDay`, `LevelInfo`, `ScatterSky`, and `CloudLayer`.
-- `GroundPlane` is suitable for small test scenes and avoids needing a binary `.ter` terrain asset for the MVP.
-- PBR materials can use `baseColorFactor` without texture files, which keeps the prototype dependency-free and easy to diff.
-- The packaged ZIP should have `levels/<level_name>/...` directly at archive root and should be tested independently of the unpacked working tree.
+- level metadata in `levels/<id>/info.json`;
+- scene object hierarchy below `levels/<id>/main/`;
+- `items.level.json` stored as newline-delimited JSON rather than one JSON array;
+- named `SpawnSphere` objects referenced by `info.json`;
+- distributable ZIP rooted directly at `levels/`.
 
-## Existing solutions reviewed
+## Runtime findings
 
-- `MoonSolo/beamng-custom-mapping`: automated BeamNG map generation/package concepts.
-- `alexkleinwaechter/BeamNG_LevelCleanUp`: modern level-format references and tooling ideas, especially deterministic validation/cleanup.
-- `Grille/BeamNG_LevelTemplateCreator`: level-template generation concepts.
-- Public BeamNG/BeamMP map packages: modern serialized `GroundPlane`, `DecalRoad`, and scene-tree examples.
+### Smoke test #1 — projected guide failure
 
-## MVP implementation direction
+BeamNG.drive 0.39.4 discovered and loaded the packaged level, resolved the named spawn points, and provided working GroundPlane collision. However, the generated white `DecalRoad` exercise guides were not visible.
 
-The first version intentionally avoids custom meshes and texture binaries. A flat asphalt `GroundPlane` provides the driving surface and native `DecalRoad` objects provide training guides. This keeps the first release small, inspectable, and easy to validate in CI. Physical cones/signage can be added after the first in-game validation pass.
+The practical cause is that `DecalRoad` is projected geometry and is not a reliable rendering primitive for this map's deliberately terrain-free `GroundPlane` design. The solution keeps the deterministic guide splines as source data but also generates a collision-free `TSStatic` COLLADA mesh for runtime display.
+
+The first runtime log also exposed a texture-less `CloudLayer` warning and missing environment-map fallback. The MVP now avoids that CloudLayer and defines `DefaultSkyCubemap` on `theLevelInfo`.
+
+### Smoke test #2 — visual guide fallback works
+
+The generated `TSStatic` guide fallback rendered successfully in BeamNG.drive 0.39.4. The Donut Basic concentric guide circles were visible and the vehicle could drive over the white geometry without any physical interference. No obvious runtime errors were reported during the test.
+
+The remaining usability problem is presentation rather than basic level loading: the pad is too visually bare and lacks strong boundaries, zone identification, surface detail, and spatial reference objects.
+
+## v0.1 readability approach
+
+The next pass therefore remains deterministic and self-contained while preserving ordinary asphalt physics:
+
+- generated level-local asphalt base-color and roughness textures affect appearance only;
+- the material keeps BeamNG's ordinary `ASPHALT` ground type and no level-local ground-model override is introduced;
+- numbered yellow zone labels and corner-bracket frames are generated as collision-free mesh graphics;
+- lightweight generated visual cones provide reference points without introducing obstacle collision in v0.1;
+- a staging area and facility perimeter make orientation clearer;
+- grass-colored visual scenery outside the pad makes the asphalt facility boundary legible;
+- only the low outer perimeter barrier is intended to add presentation collision and must be verified in the next in-game smoke test.
+
+This keeps the training surface suitable for technique practice and later A/B testing of tyre-physics mods rather than baking easier drift physics into the map.

@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/**"
+      - "fix/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Compile Python sources
+        run: python -m compileall -q scripts tests
+
+      - name: Generate BeamNG level
+        run: |
+          python scripts/generate_level.py
+          python scripts/generate_preview.py
+
+      - name: Check deterministic generation
+        run: |
+          python scripts/generate_level.py --check
+          python scripts/generate_preview.py --check
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Apply deterministic visual polish
+        run: |
+          python scripts/apply_visual_polish.py
+          python scripts/apply_visual_polish.py --check
+
+      - name: Validate BeamNG level structure
+        run: python scripts/validate_level.py
+
+      - name: Build deterministic mod ZIP
+        run: python scripts/package_mod.py --output dist/drift_training_pad.zip
+
+      - name: Upload BeamNG mod artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: drift-training-pad
+          path: dist/drift_training_pad.zip
+          if-no-files-found: error
+          retention-days: 14
