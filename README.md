@@ -20,7 +20,7 @@ Each exercise has its own BeamNG spawn point so practice can stay focused and re
 
 **v0.1 MVP is under development for BeamNG.drive 0.39.4.**
 
-The repository generates the complete level structure and schematic preview from source, validates them statically, and builds a deterministic BeamNG mod ZIP in CI. The next release gate is an in-game smoke test of the packaged ZIP.
+Runtime smoke testing has confirmed that the level loads from the packaged ZIP, spawn points work, the flat GroundPlane has collision, and the generated guide geometry is visible without affecting the car. The current draft adds the first readability/presentation pass: textured asphalt, numbered exercise-zone labels, visual cones, a staging area, grass outside the pad, and a low perimeter barrier.
 
 See [the roadmap](docs/roadmap.md) and [issue #1](https://github.com/chinn-choppa/beamng-drift-training-pad/issues/1).
 
@@ -29,27 +29,39 @@ See [the roadmap](docs/roadmap.md) and [issue #1](https://github.com/chinn-chopp
 - Training facility, not a full drift track.
 - Ordinary BeamNG asphalt physics — no artificially drift-friendly surface.
 - Simple guide geometry that makes radius and transition errors visible.
+- Clear exercise numbering, staging and boundaries without cluttering the driving surface.
 - No third-party runtime dependencies for the MVP.
 - Small and BeamMP-friendly by design.
-- Deterministic generated level files, so map changes are reviewable.
+- Deterministic generated level files and assets, so map changes are reviewable.
 
 ## Install a CI build
 
 1. Open the latest successful **CI** workflow run on GitHub Actions.
 2. Download the `drift-training-pad` artifact.
 3. Put the contained `drift_training_pad.zip` into your BeamNG user-folder `mods` directory.
-4. Make sure no unpacked development copy of `levels/drift_training_pad` is active at the same time.
-5. Start BeamNG.drive and select **Drift Training Pad**.
+4. Make sure no older ZIP or unpacked development copy of `levels/drift_training_pad` is active at the same time.
+5. Clear BeamNG cache after structural/material changes.
+6. Start BeamNG.drive and select **Drift Training Pad**.
 
 No physics mods are required.
 
 ## Development
 
-CI generates the distributable map using the modern BeamNG level structure:
+CI generates the complete distributable map, including level data, meshes, textures and preview:
 
 ```text
 levels/
 └── drift_training_pad/
+    ├── art/
+    │   ├── shapes/
+    │   │   ├── facility_boundaries.dae
+    │   │   ├── facility_graphics.dae
+    │   │   ├── facility_scenery.dae
+    │   │   ├── training_cone.dae
+    │   │   └── training_markings.dae
+    │   └── textures/
+    │       ├── asphalt_b.color.png
+    │       └── asphalt_r.data.png
     ├── info.json
     ├── main.materials.json
     ├── preview.png
@@ -68,16 +80,18 @@ python scripts/generate_level.py
 python scripts/generate_preview.py
 python scripts/generate_level.py --check
 python scripts/generate_preview.py --check
-python scripts/validate_level.py
 python -m unittest discover -s tests -v
+python scripts/apply_visual_polish.py
+python scripts/apply_visual_polish.py --check
+python scripts/validate_level.py
 python scripts/package_mod.py --output dist/drift_training_pad.zip
 ```
 
-The project intentionally uses only Python's standard library for generation, validation, tests, preview rendering, and packaging.
+The project intentionally uses only Python's standard library for generation, validation, tests, preview rendering, asset generation, and packaging.
 
 ## Runtime testing
 
-Static CI checks cannot prove that BeamNG accepts every serialized object. Before a public release, the packaged ZIP must be tested in BeamNG.drive with unrelated mods disabled and `beamng.log` inspected for level-specific errors.
+Static CI checks cannot prove that BeamNG accepts every serialized object or imported mesh. Before a public release, the packaged ZIP must be tested in BeamNG.drive with unrelated mods disabled and `beamng.log` inspected for level-specific errors.
 
 See [docs/testing.md](docs/testing.md).
 
