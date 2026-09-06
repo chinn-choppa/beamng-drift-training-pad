@@ -1,7 +1,8 @@
-# BeamNG / authoring outputs
+# BeamNG / generated authoring outputs
 *.zip
 /dist/
 /build/
+/levels/
 /source/
 *.autosave
 *.bak
