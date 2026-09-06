@@ -39,6 +39,11 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
+      - name: Apply deterministic visual polish
+        run: |
+          python scripts/apply_visual_polish.py
+          python scripts/apply_visual_polish.py --check
+
       - name: Validate BeamNG level structure
         run: python scripts/validate_level.py
 
