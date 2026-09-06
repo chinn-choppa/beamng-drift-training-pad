@@ -1,6 +1,6 @@
 # Roadmap
 
-## v0.1 — Playable training-pad MVP
+## v0.1 — Playable and readable training-pad MVP
 
 Goal: a small, deterministic BeamNG.drive 0.39.4 level that loads as a normal freeroam map and provides clearly separated practice zones.
 
@@ -20,18 +20,27 @@ MVP acceptance criteria:
 - At least one valid default `SpawnSphere` is exposed through `info.json`.
 - Each exercise has a named spawn point.
 - Ground is a flat asphalt `GroundPlane` with ordinary BeamNG asphalt physics.
-- Exercise guides use simple native level objects and no third-party dependencies.
+- Exercise guides are generated deterministically and do not alter vehicle collision/grip.
+- The training facility has a readable perimeter, numbered zone labels and visual reference objects.
+- Asphalt appearance uses level-local generated textures while keeping the stock `ASPHALT` physical ground type.
+- No level-local ground model override is allowed for the MVP.
 - Level-generation output is deterministic and checked in CI.
-- Static validator catches malformed NDJSON, missing spawn references, invalid materials, unsafe package paths, and accidental authoring files.
+- Static validator catches malformed NDJSON, missing spawn references, invalid materials/assets, unsafe package paths, and accidental authoring files.
 - CI builds a distributable ZIP with `levels/drift_training_pad/` at archive root.
-- Packaged ZIP passes an in-game smoke test on BeamNG.drive 0.39.4 before the first public release.
+- Packaged ZIP passes in-game smoke testing on BeamNG.drive 0.39.4 before the first public release.
 
-## v0.2 — Visual polish and teaching aids
+Runtime progress:
 
-- Better exercise signage/labels.
-- Physical cones/pylons where they improve spatial reference.
+- Smoke #1: level/spawns/GroundPlane loaded; projected DecalRoad guides were invisible.
+- Smoke #2: TSStatic fallback guides rendered and were confirmed non-obstructive while driving.
+- Smoke #3: validate the readability pass (textured asphalt, zone labels, cones, scenery and perimeter barrier).
+
+## v0.2 — Teaching aids and presentation
+
 - Per-exercise preview images.
-- Improved staging area and map presentation.
+- Optional on-map instruction boards with concise technique cues.
+- Replace visual-only cones with appropriate lightweight physical props if they improve training and performance remains good.
+- Improve facility dressing without reducing visibility or frame rate.
 - Optional bilingual/community translations.
 
 ## v0.3 — Community/BeamMP polish
