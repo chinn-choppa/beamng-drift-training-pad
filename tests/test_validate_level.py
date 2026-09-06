@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
 
 
 def load_module(name: str, path: Path):
@@ -20,6 +21,7 @@ def load_module(name: str, path: Path):
 
 gen = load_module("generate_level_for_validation", ROOT / "scripts" / "generate_level.py")
 validator = load_module("validate_level", ROOT / "scripts" / "validate_level.py")
+preview = load_module("generate_preview", ROOT / "scripts" / "generate_preview.py")
 
 
 class ValidateLevelTests(unittest.TestCase):
@@ -28,14 +30,12 @@ class ValidateLevelTests(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         root = Path(tmp.name)
         gen.generate(root)
-        src_preview = ROOT / gen.LEVEL_ROOT / "preview.png"
-        dst_preview = root / gen.LEVEL_ROOT / "preview.png"
-        dst_preview.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src_preview, dst_preview)
+        preview.generate(root)
         return root
 
-    def test_committed_level_passes(self):
-        self.assertEqual(validator.validate(ROOT), [])
+    def test_generated_level_passes(self):
+        root = self.make_tree()
+        self.assertEqual(validator.validate(root), [])
 
     def test_invalid_ndjson_is_rejected(self):
         root = self.make_tree()
