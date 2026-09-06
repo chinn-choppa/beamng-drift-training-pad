@@ -4,10 +4,15 @@ import argparse
 import json
 import re
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 LEVEL_ID = "drift_training_pad"
 LEVEL_ROOT = Path("levels") / LEVEL_ID
+MARKINGS_REL = Path("art") / "shapes" / "training_markings.dae"
+MARKINGS_PATH = f"/{(LEVEL_ROOT / MARKINGS_REL).as_posix()}"
+MARKING_MESH_NAME = "training_markings_mesh"
+MARKING_MATERIAL = "driftpad_marking_white"
 FORBIDDEN_PARTS = {"source", "build", "dist", "__pycache__", ".git"}
 ABSOLUTE_WINDOWS_PATH = re.compile(r"[A-Za-z]:[\\/]")
 
@@ -47,14 +52,42 @@ def _load_ndjson(path: Path) -> list[dict]:
     return objects
 
 
+def _validate_markings_dae(path: Path) -> list[str]:
+    errors: list[str] = []
+    if not path.is_file():
+        return [f"missing generated visual markings mesh: {path}"]
+    try:
+        root = ET.parse(path).getroot()
+    except (OSError, ET.ParseError) as exc:
+        return [f"{path}: invalid COLLADA XML: {exc}"]
+    namespace = "{http://www.collada.org/2005/11/COLLADASchema}"
+    if root.tag != namespace + "COLLADA":
+        errors.append(f"{path}: root must be COLLADA 1.4.1")
+        return errors
+    triangles = root.findall(f".//{namespace}triangles")
+    triangle_count = 0
+    for tri in triangles:
+        try:
+            triangle_count += int(tri.get("count", "0"))
+        except ValueError:
+            errors.append(f"{path}: triangles count is not an integer")
+    if triangle_count <= 0:
+        errors.append(f"{path}: visual markings mesh contains no triangles")
+    material_names = {node.get("name") for node in root.findall(f".//{namespace}material")}
+    if MARKING_MATERIAL not in material_names:
+        errors.append(f"{path}: missing COLLADA material {MARKING_MATERIAL!r}")
+    return errors
+
+
 def validate(repo_root: Path) -> list[str]:
     errors: list[str] = []
     level_root = repo_root / LEVEL_ROOT
     info_path = level_root / "info.json"
     materials_path = level_root / "main.materials.json"
     scene_root = level_root / "main" / "items.level.json"
+    markings_path = level_root / MARKINGS_REL
 
-    for path in (info_path, materials_path, scene_root):
+    for path in (info_path, materials_path, scene_root, markings_path):
         if not path.is_file():
             errors.append(f"missing required file: {path.relative_to(repo_root)}")
     if errors:
@@ -97,6 +130,16 @@ def validate(repo_root: Path) -> list[str]:
     if len(mission_groups) != 1:
         errors.append(f"expected exactly one MissionGroup SimGroup, found {len(mission_groups)}")
 
+    level_infos = [o for o in all_objects if o.get("class") == "LevelInfo" and o.get("name") == "theLevelInfo"]
+    if len(level_infos) != 1:
+        errors.append(f"expected exactly one theLevelInfo, found {len(level_infos)}")
+    elif level_infos[0].get("globalEnviromentMap") != "DefaultSkyCubemap":
+        errors.append("theLevelInfo must define globalEnviromentMap=DefaultSkyCubemap")
+
+    cloud_layers = [o for o in all_objects if o.get("class") == "CloudLayer"]
+    if cloud_layers:
+        errors.append("MVP must not include CloudLayer without an explicit texture")
+
     spawns = {o.get("name") for o in all_objects if o.get("class") == "SpawnSphere" and isinstance(o.get("name"), str)}
     default_spawn = info.get("defaultSpawnPointName")
     if default_spawn not in spawns:
@@ -128,6 +171,21 @@ def validate(repo_root: Path) -> list[str]:
     if len(decal_roads) < 20:
         errors.append(f"expected at least 20 DecalRoad guide objects, found {len(decal_roads)}")
 
+    marking_meshes = [o for o in all_objects if o.get("class") == "TSStatic" and o.get("name") == MARKING_MESH_NAME]
+    if len(marking_meshes) != 1:
+        errors.append(f"expected exactly one {MARKING_MESH_NAME} TSStatic, found {len(marking_meshes)}")
+    else:
+        mesh = marking_meshes[0]
+        if mesh.get("shapeName") != MARKINGS_PATH:
+            errors.append(f"{MARKING_MESH_NAME}: unexpected shapeName {mesh.get('shapeName')!r}")
+        if mesh.get("collisionType") != "None":
+            errors.append(f"{MARKING_MESH_NAME}: collisionType must be None")
+        if mesh.get("decalType") != "None":
+            errors.append(f"{MARKING_MESH_NAME}: decalType must be None")
+        if mesh.get("isRenderEnabled") is not True:
+            errors.append(f"{MARKING_MESH_NAME}: isRenderEnabled must be true")
+    errors.extend(_validate_markings_dae(markings_path))
+
     referenced_materials: set[str] = set()
     for obj in ground_planes + decal_roads:
         material = obj.get("material")
@@ -148,6 +206,8 @@ def validate(repo_root: Path) -> list[str]:
             errors.append(f"{material_name}: top-level key and name must match")
         if definition.get("groundType") != "ASPHALT":
             errors.append(f"{material_name}: training surface/guide material must use ASPHALT groundType")
+        if definition.get("activeLayers") != 1:
+            errors.append(f"{material_name}: activeLayers must be 1 for the authored PBR stage")
 
     asphalt = materials.get("driftpad_asphalt", {})
     if isinstance(asphalt, dict) and asphalt.get("groundType") != "ASPHALT":
@@ -172,6 +232,9 @@ def validate(repo_root: Path) -> list[str]:
         if path.is_file() and path.suffix.lower() in {".bak", ".autosave"}:
             errors.append(f"forbidden editor backup file: {rel}")
 
+    # Only scan JSON/NDJSON for author-local paths. COLLADA contains URI/XML
+    # namespaces such as http://..., which intentionally resemble drive paths
+    # to a simplistic regex.
     for path in [info_path, materials_path, *ndjson_paths]:
         try:
             text = path.read_text(encoding="utf-8")
@@ -185,7 +248,7 @@ def validate(repo_root: Path) -> list[str]:
         "large_circle_15m", "large_circle_20m", "large_circle_25m",
         "figure_eight_easy", "figure_eight_normal", "transition_lane_guide",
         "single_corner_approach", "single_corner_inner", "single_corner_outer",
-        "single_corner_exit", "training_loop_guide",
+        "single_corner_exit", "training_loop_guide", MARKING_MESH_NAME,
     }
     missing_names = sorted(required_names - set(names))
     if missing_names:

@@ -12,10 +12,13 @@ SCENE_ROOT = LEVEL_ROOT / "main" / "items.level.json"
 MISSION_ITEMS = LEVEL_ROOT / "main" / "MissionGroup" / "items.level.json"
 MATERIALS = LEVEL_ROOT / "main.materials.json"
 INFO = LEVEL_ROOT / "info.json"
+MARKINGS_DAE = LEVEL_ROOT / "art" / "shapes" / "training_markings.dae"
 
 IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1]
 MARKING_MATERIAL = "driftpad_marking_white"
 ASPHALT_MATERIAL = "driftpad_asphalt"
+MARKING_MESH_NAME = "training_markings_mesh"
+MARKING_MESH_PATH = f"/{MARKINGS_DAE.as_posix()}"
 
 
 def _round(value: float) -> float:
@@ -58,7 +61,7 @@ def decal_road(name: str, nodes: list[list[float]], *, looped: bool = False) -> 
     if len(nodes) < 2:
         raise ValueError(f"{name}: DecalRoad needs at least two nodes")
     first = nodes[0]
-    obj = {
+    return {
         "name": name,
         "class": "DecalRoad",
         "__parent": "MissionGroup",
@@ -71,7 +74,6 @@ def decal_road(name: str, nodes: list[list[float]], *, looped: bool = False) -> 
         "renderPriority": 10,
         "drivability": 0,
     }
-    return obj
 
 
 def spawn(name: str, x: float, y: float, heading_deg: float = 0.0) -> dict:
@@ -97,67 +99,8 @@ def _cross(name: str, cx: float, cy: float, arm: float = 2.0) -> list[dict]:
     ]
 
 
-def build_objects() -> list[dict]:
-    objects: list[dict] = [
-        {
-            "name": "theLevelInfo",
-            "class": "LevelInfo",
-            "__parent": "MissionGroup",
-            "gravity": -9.80665,
-            "visibleDistance": 2500,
-            "fogDensity": 0.00045,
-            "fogAtmosphereHeight": 700,
-        },
-        {
-            "name": "tod",
-            "class": "TimeOfDay",
-            "__parent": "MissionGroup",
-            "startTime": 0,
-            "time": 0,
-            "play": False,
-            "dayLength": 1200,
-            "axisTilt": 23.44,
-            "latitude": 48,
-            "longitude": 11,
-            "year": 2026,
-            "month": 6,
-            "day": 20,
-            "utcOffset": "2",
-            "celestialProfile": "earth",
-        },
-        {"name": "sunsky", "class": "ScatterSky", "__parent": "MissionGroup"},
-        {
-            "name": "clouds",
-            "class": "CloudLayer",
-            "__parent": "MissionGroup",
-            "coverage": 0.12,
-            "windSpeed": 0.02,
-            "windDirection": [1, 0],
-            "altitudeKm": 4,
-        },
-        {
-            "name": "training_ground",
-            "class": "GroundPlane",
-            "__parent": "MissionGroup",
-            "position": [0, 0, 0],
-            "material": ASPHALT_MATERIAL,
-            "squareSize": 16,
-            "scaleU": 8,
-            "scaleV": 8,
-        },
-    ]
-
-    # Named spawn points near every exercise.
-    objects.extend([
-        spawn("spawns_default", 0, 270, 180),
-        spawn("spawns_donut", -185, 205, 180),
-        spawn("spawns_large_circle", 65, 205, 180),
-        spawn("spawns_figure_eight_easy", -180, -5, 180),
-        spawn("spawns_figure_eight_normal", 35, -5, 180),
-        spawn("spawns_transition_lane", 205, -235, 0),
-        spawn("spawns_single_corner", -85, -245, 90),
-        spawn("spawns_training_loop", 0, 265, 180),
-    ])
+def _guide_objects() -> list[dict]:
+    objects: list[dict] = []
 
     # 1. Donut Basic.
     donut_center = (-185.0, 150.0)
@@ -214,7 +157,79 @@ def build_objects() -> list[dict]:
         (-245, -155), (-270, -20), (-265, 120),
     ]
     objects.append(decal_road("training_loop_guide", _points_polyline(loop, width=0.22), looped=True))
+    return objects
 
+
+def build_objects() -> list[dict]:
+    objects: list[dict] = [
+        {
+            "name": "theLevelInfo",
+            "class": "LevelInfo",
+            "__parent": "MissionGroup",
+            "gravity": -9.80665,
+            "nearClip": 0.1,
+            "visibleDistance": 2500,
+            "decalBias": 0.0005,
+            "fogDensity": 0.00045,
+            "fogAtmosphereHeight": 700,
+            "globalEnviromentMap": "DefaultSkyCubemap",
+            "soundAmbience": "AudioAmbienceDefault",
+            "soundDistanceModel": "Logarithmic",
+        },
+        {
+            "name": "tod",
+            "class": "TimeOfDay",
+            "__parent": "MissionGroup",
+            "startTime": 0,
+            "time": 0,
+            "play": False,
+            "dayLength": 1200,
+            "axisTilt": 23.44,
+            "latitude": 48,
+            "longitude": 11,
+            "year": 2026,
+            "month": 6,
+            "day": 20,
+            "utcOffset": "2",
+            "celestialProfile": "earth",
+        },
+        {"name": "sunsky", "class": "ScatterSky", "__parent": "MissionGroup"},
+        {
+            "name": "training_ground",
+            "class": "GroundPlane",
+            "__parent": "MissionGroup",
+            "position": [0, 0, 0],
+            "material": ASPHALT_MATERIAL,
+            "squareSize": 16,
+            "scaleU": 8,
+            "scaleV": 8,
+        },
+        {
+            "name": MARKING_MESH_NAME,
+            "class": "TSStatic",
+            "__parent": "MissionGroup",
+            "shapeName": MARKING_MESH_PATH,
+            "position": [0, 0, 0],
+            "rotationMatrix": IDENTITY,
+            "scale": [1, 1, 1],
+            "collisionType": "None",
+            "decalType": "None",
+            "isRenderEnabled": True,
+        },
+    ]
+
+    # Named spawn points near every exercise.
+    objects.extend([
+        spawn("spawns_default", 0, 270, 180),
+        spawn("spawns_donut", -185, 205, 180),
+        spawn("spawns_large_circle", 65, 205, 180),
+        spawn("spawns_figure_eight_easy", -180, -5, 180),
+        spawn("spawns_figure_eight_normal", 35, -5, 180),
+        spawn("spawns_transition_lane", 205, -235, 0),
+        spawn("spawns_single_corner", -85, -245, 90),
+        spawn("spawns_training_loop", 0, 265, 180),
+    ])
+    objects.extend(_guide_objects())
     return objects
 
 
@@ -228,6 +243,7 @@ def build_materials() -> dict:
                 {"baseColorFactor": [0.115, 0.12, 0.125, 1], "roughnessFactor": 0.94, "metallicFactor": 0},
                 {}, {}, {}
             ],
+            "activeLayers": 1,
             "groundType": "ASPHALT",
             "annotation": "ASPHALT",
             "materialTag0": "beamng",
@@ -242,6 +258,7 @@ def build_materials() -> dict:
                 {"baseColorFactor": [0.92, 0.92, 0.88, 1], "roughnessFactor": 0.78, "metallicFactor": 0},
                 {}, {}, {}
             ],
+            "activeLayers": 1,
             "groundType": "ASPHALT",
             "annotation": "ROAD",
             "materialTag0": "beamng",
@@ -249,6 +266,101 @@ def build_materials() -> dict:
             "version": 1.5,
         },
     }
+
+
+def _segment_quad(a: list[float], b: list[float]) -> list[tuple[float, float, float]] | None:
+    ax, ay = float(a[0]), float(a[1])
+    bx, by = float(b[0]), float(b[1])
+    dx, dy = bx - ax, by - ay
+    length = math.hypot(dx, dy)
+    if length < 1e-9:
+        return None
+    # DecalRoad node width is treated as the full visual line width. Keep a
+    # minimum so guide lines remain readable at normal driving camera heights.
+    width = max(0.20, (float(a[3]) + float(b[3])) * 0.5)
+    half = width * 0.5
+    nx, ny = -dy / length * half, dx / length * half
+    z = max(float(a[2]), float(b[2]), 0.035)
+    return [
+        (_round(ax + nx), _round(ay + ny), _round(z)),
+        (_round(ax - nx), _round(ay - ny), _round(z)),
+        (_round(bx - nx), _round(by - ny), _round(z)),
+        (_round(bx + nx), _round(by + ny), _round(z)),
+    ]
+
+
+def build_markings_dae() -> str:
+    """Build a collision-free visual fallback for DecalRoad guide markings.
+
+    BeamNG DecalRoads are projected decals. They are not reliably rendered on
+    a GroundPlane unless a TerrainBlock exists. The MVP intentionally avoids a
+    TerrainBlock, so the same guide splines are also rendered as one TSStatic
+    Collada mesh. Collision is disabled on the TSStatic, keeping tyre contact
+    exclusively on the ordinary asphalt GroundPlane.
+    """
+    vertices: list[tuple[float, float, float]] = []
+    indices: list[int] = []
+    for road in _guide_objects():
+        nodes = road["nodes"]
+        pairs = list(zip(nodes, nodes[1:]))
+        if road.get("looped") and len(nodes) > 2:
+            pairs.append((nodes[-1], nodes[0]))
+        for a, b in pairs:
+            quad = _segment_quad(a, b)
+            if quad is None:
+                continue
+            base = len(vertices)
+            vertices.extend(quad)
+            # Up-facing winding for both triangles.
+            indices.extend([base, base + 1, base + 2, base, base + 2, base + 3])
+
+    positions = " ".join(f"{x:.4f} {y:.4f} {z:.4f}" for x, y, z in vertices)
+    triangles = " ".join(str(i) for i in indices)
+    vertex_count = len(vertices)
+    triangle_count = len(indices) // 3
+    return f'''<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <contributor><authoring_tool>beamng-drift-training-pad deterministic generator</authoring_tool></contributor>
+    <unit name="meter" meter="1"/>
+    <up_axis>Z_UP</up_axis>
+  </asset>
+  <library_effects>
+    <effect id="{MARKING_MATERIAL}-effect">
+      <profile_COMMON>
+        <technique sid="common"><lambert><diffuse><color>0.92 0.92 0.88 1</color></diffuse></lambert></technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_materials>
+    <material id="{MARKING_MATERIAL}-material" name="{MARKING_MATERIAL}">
+      <instance_effect url="#{MARKING_MATERIAL}-effect"/>
+    </material>
+  </library_materials>
+  <library_geometries>
+    <geometry id="training_markings-geometry" name="training_markings">
+      <mesh>
+        <source id="training_markings-positions">
+          <float_array id="training_markings-positions-array" count="{vertex_count * 3}">{positions}</float_array>
+          <technique_common><accessor source="#training_markings-positions-array" count="{vertex_count}" stride="3"><param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/></accessor></technique_common>
+        </source>
+        <vertices id="training_markings-vertices"><input semantic="POSITION" source="#training_markings-positions"/></vertices>
+        <triangles material="{MARKING_MATERIAL}" count="{triangle_count}"><input semantic="VERTEX" source="#training_markings-vertices" offset="0"/><p>{triangles}</p></triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="Scene" name="Scene">
+      <node id="training_markings" name="training_markings" type="NODE">
+        <instance_geometry url="#training_markings-geometry">
+          <bind_material><technique_common><instance_material symbol="{MARKING_MATERIAL}" target="#{MARKING_MATERIAL}-material"/></technique_common></bind_material>
+        </instance_geometry>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene><instance_visual_scene url="#Scene"/></scene>
+</COLLADA>
+'''
 
 
 def build_info() -> dict:
@@ -297,6 +409,7 @@ def expected_outputs(repo_root: Path) -> dict[Path, str]:
         repo_root / MISSION_ITEMS: render_ndjson(build_objects()),
         repo_root / MATERIALS: json.dumps(build_materials(), indent=2) + "\n",
         repo_root / INFO: json.dumps(build_info(), indent=2, ensure_ascii=False) + "\n",
+        repo_root / MARKINGS_DAE: build_markings_dae(),
     }
 
 
@@ -319,7 +432,7 @@ def generate(repo_root: Path, *, check: bool = False) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true", help="fail if generated level files differ from committed files")
+    parser.add_argument("--check", action="store_true", help="fail if generated level files differ from expected output")
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
     args = parser.parse_args()
     return 0 if generate(args.repo_root.resolve(), check=args.check) else 1
